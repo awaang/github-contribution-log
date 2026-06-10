@@ -5,7 +5,7 @@
 **Contribution Number:** 1  
 **Student:** Amy Wang  
 **Issue:** [GitHub issue link](https://github.com/InnerWarden/innerwarden/issues/71)  
-**Status:** Phase 1, In Progress
+**Status:** Phase 2 In Progress
 
 ---
 
