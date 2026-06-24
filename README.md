@@ -5,7 +5,7 @@
 **Contribution Number:** 1  
 **Student:** Amy Wang  
 **Issue:** [GitHub issue link](https://github.com/near/mpc/issues/1298)  
-**Status:** Phase 2 Complete
+**Status:** Phase 3 Complete
 
 ---
 
@@ -95,30 +95,40 @@ Output:
 
 ### Analysis
 
-[Your analysis of the root cause - what's causing the issue?]
+HTTP body parsing/building for the API is mixed with the networking code in `server.rs` and `client.rs`.
 
 ### Proposed Solution
 
-[High-level description of your fix approach]
+Separate parsing logic from the rest of the networking code into its smaller helper functions. Write unit tests for success and error cases.
 
 ### Implementation Plan
 
 Using UMPIRE framework (adapted):
 
-**Understand:** [Restate the problem]
+**Understand:** Request/response body parsing for `/get_keyshares` and `/set_keyshares` should be testable without starting a web server or network connection.
 
-**Match:** [What similar patterns/solutions exist in the codebase?]
+**Match:** Follow the pattern in `serialization.rs` and `encryption.rs`- pure functions + `#[cfg(test)]` module with unit tests. Follow `docs/engineering-standards.md` for separating I/O from logic and test structure (`<system>__should_<assertion>`).
 
-**Plan:** [Step-by-step implementation plan]
-1. [Modify file X to do Y]
-2. [Add function Z]
-3. [Update tests]
+**Plan:** 
+1. Add `crates/node/src/migration_service/web/request.rs` (or extend` serialization.rs` if maintainers prefer) with helpers.
+2. Register the module in `web.rs`.
+3. Refactor `server.rs` `handle_request` to read the HTTP body, then call parse helpers; keep storage/channel/response logic in the handler.
+4. Refactor `client.rs` `make_keyshare_get_request` and `make_set_keyshares_request` to call build/parse helpers; keep networking (send request, check status) in the client functions.
+5. Add unit tests in `request.rs` for valid input, invalid JSON, bad encryption, empty body.
+6. Run existing `migration_service::web` integration tests to confirm no behavior change.
 
 **Implement:** [Link to your branch/commits as you work]
 
-**Review:** [Self-review checklist - does it follow the project's contribution guidelines?]
+**Review:** 
 
-**Evaluate:** [How will you verify it works?]
+- [x] Parsing/building logic is in sync helpers with no network/async
+- [x] New tests use `Given / When / Then` and `__should_` naming
+- [x] No unnecessary comments (per engineering standards)
+- [x] `cargo fmt` and `cargo clippy pass`
+- [x] Existing integration tests in `web.rs` still pass
+- [x] Scope limited to `/get_keyshares` and `/set_keyshares` (no change to /hello)
+
+**Evaluate:** New unit tests pass in isolation; `cargo nextest run --cargo-profile=test-release -p mpc-node migration_service::web` passes; manual spot-check optional (see Testing Strategy).
 
 ---
 
@@ -126,30 +136,37 @@ Using UMPIRE framework (adapted):
 
 ### Unit Tests
 
-- [ ] Test case 1: [Description]
-- [ ] Test case 2: [Description]
-- [ ] Test case 3: [Description]
+- [x] Test case 1: Valid keyset JSON parses successfully (GET /get_keyshares)
+- [x] Test case 2: Invalid JSON returns an error
+- [x] Test case 3: Valid encrypted keyshares body parses successfully (PUT /set_keyshares)
 
 ### Integration Tests
 
-- [ ] Integration scenario 1
-- [ ] Integration scenario 2
+- [x] Existing migration_service::web tests still pass (no new integration tests required)
 
 ### Manual Testing
 
-[What you tested manually and results]
+Ran locally:
+- [x] new unit tests: `cargo nextest run --cargo-profile=test-release -p mpc-node migration_service::web::request`
+- [x] existing integration tests: `cargo nextest run --cargo-profile=test-release -p mpc-node migration_service::web`
 
 ---
 
 ## Implementation Notes
 
-### Week [X] Progress
+### Week 2 Progress
 
-[What you built this week, challenges faced, decisions made]
+- Chose issue #1298 and documented understanding/reproduction
+- Set up Rust + cargo-nextest
+- Ran `cargo nextest list/run` for `migration_service::web`; confirmed integration tests exist and `serialization.rs` already has a unit test pattern to follow
 
-### Week [Y] Progress
+### Week 3 Progress
 
-[Continue documenting as you work]
+- Added `request.rs` with parse/build helpers
+- Refactored `server.rs` and `client.rs`
+- Added unit tests
+- Biggest challenge: understanding Rust syntax, compile time
+
 
 ### Code Changes
 
